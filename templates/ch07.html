@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💻 실습: 한 줄 방명록 시스템</title>
+    <style>
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 50px 20px;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        .app-container {
+            max-width: 550px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 24px;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #dcdde1;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            margin-bottom: 30px;
+        }
+        .btn-submit:hover {
+            background-color: #2980b9;
+        }
+        .guestbook-section {
+            border-top: 2px dashed #b2bec3;
+            padding-top: 25px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-refresh {
+            background: none;
+            border: 1px solid #7f8c8d;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-refresh:hover {
+            background-color: #eee;
+        }
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        /* 스크롤바 커스텀 */
+        .card-list::-webkit-scrollbar { width: 6px; }
+        .card-list::-webkit-scrollbar-thumb { background: #b2bec3; border-radius: 4px; }
+        
+        .guest-card {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 6px;
+        }
+        .visitor-name {
+            font-weight: bold;
+            color: #2e86de;
+        }
+        .visitor-comment {
+            font-size: 15px;
+            color: #2c3e50;
+            word-break: break-all;
+        }
+        .empty-msg {
+            text-align: center;
+            color: #95a5a6;
+            font-style: italic;
+            padding: 30px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h1>✍️ 나만의 미니 방명록</h1>
+    
+    <div class="input-group">
+        <label for="inputName">방문자 이름</label>
+        <input type="text" id="inputName" placeholder="이름을 적어주세요.">
+    </div>
+    <div class="input-group">
+        <label for="inputComment">남길 한마디</label>
+        <input type="text" id="inputComment" placeholder="따뜻한 말 한마디를 남겨주세요.">
+    </div>
+    <button class="btn-submit" onclick="submitGuestbook()">방명록 등록하기 🚀</button>
+
+    <div class="guestbook-section">
+        <div class="section-title">
+            <span>📋 실시간 방명록 명단</span>
+            <button class="btn-refresh" onclick="fetchAndRenderList()">수동 갱신 🔄</button>
+        </div>
+        
+        <div class="card-list" id="guestbookList">
+            <div class="empty-msg">첫 방명록을 등록하거나 수동 갱신을 눌러보세요!</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 💡 화면이 최초로 켜졌을 때 자동으로 기존 리스트를 긁어오도록 설정
+    window.onload = function() {
+        fetchAndRenderList();
+    };
+
+    // 1. [POST 방식] 방명록 등록 함수
+    function submitGuestbook() {
+        const nameNode = document.getElementById('inputName');
+        const commentNode = document.getElementById('inputComment');
+
+        if (!nameNode.value.trim() || !commentNode.value.trim()) {
+            alert("이름과 메시지를 모두 채워주세요!");
+            return;
+        }
+
+        const sendData = {
+            name: nameNode.value,
+            comment: commentNode.value
+        };
+
+        // 실습용 백엔드 등록 API 엔드포인트 호출
+        fetch('/api/visit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sendData)
+        })
+        .then(response => response.json())
+        .then(result => {
+            alert(result.message);
+            // 폼 깔끔하게 비워주기
+            nameNode.value = '';
+            commentNode.value = '';
+            // 리스트 자동 업데이트 호출
+            fetchAndRenderList();
+        })
+        .catch(error => alert("서버 저장 실패: " + error));
+    }
+
+    // 2. [GET 방식] 방명록 목록 불러오기 & 렌더링 함수
+    function fetchAndRenderList() {
+        // 실습용 백엔드 조회 API 엔드포인트 호출
+        fetch('/api/visitors')
+        .then(response => response.json())
+        .then(dataList => {
+            const listContainer = document.getElementById('guestbookList');
+            listContainer.innerHTML = ''; // 기존 목록 초기화
+
+            if (dataList.length === 0) {
+                listContainer.innerHTML = `<div class="empty-msg">아직 방명록이 비어있습니다. 첫 방문자가 되어보세요!</div>`;
+                return;
+            }
+
+            // 백엔드가 제공한 JSON 배열을 loop 돌며 화면에 피드 박스 생성
+            dataList.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'guest-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="visitor-name">👤 ${item.name}</span>
+                        <span>No. ${item.id}</span>
+                    </div>
+                    <div class="visitor-comment">${item.comment}</div>
+                `;
+                listContainer.appendChild(card);
+            });
+        })
+        .catch(error => alert("데이터 조회 실패: " + error));
+    }
+</script>
+
+</body>
+</html>
