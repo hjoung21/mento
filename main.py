@@ -1,78 +1,69 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request,jsonify
 import sqlite3
 
-DB_NAME = "guestbook.db"
-app = Flask(__name__)
-
+DB_NAME='commentdb'
+app=Flask(__name__)
 def create_table():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    conn=sqlite3.connect(DB_NAME)
+    cursor=conn.cursor()
     cursor.execute("""
-    create table if not exists visitors(
-                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                   name TEXT NOT NULL,
-                   comment TEXT NOT NULL
+    create table if not exists commenttbl(
+                    name text not null,
+                    comment text not null
                     )
     """)
     conn.commit()
     conn.close()
-
 def select():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""select * from visitors""")
-    rows = cursor.fetchall()
+    conn=sqlite3.connect(DB_NAME)
+    cursor=conn.cursor()
+    cursor.execute("""select * from commenttbl""")
+    rows=cursor.fetchall()
     print(rows)
+    conn.commit()
     conn.close()
     return rows
-
-def insert(name, comment):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+def insert(name,comment):
+    conn=sqlite3.connect(DB_NAME)
+    cursor=conn.cursor()
     cursor.execute("""
-        insert into visitors(name,comment) values(?,?)
-    """, (name, comment))
+        insert into commenttbl(name,comment) values(?,?)
+""",(name,comment))
     conn.commit()
     conn.close()
-
 def delete(id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    conn=sqlite3.connect(DB_NAME)
+    cursor=conn.cursor()
     cursor.execute("""
-        delete from visitors where id=(?)
-    """, (id,))
+        delete from commenttbl where id=(?)
+""",(id,))
     conn.commit()
     conn.close()
-
-def update(id, name, comment):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+def update(id,name,age):
+    conn=sqlite3.connect(DB_NAME)
+    cursor=conn.cursor()
     cursor.execute("""
-        update visitors set name=?, comment=? where id=?
-    """, (name, comment, id))
+        update commenttbl set name=?, age=? where id=?
+""",(name,age,id))
     conn.commit()
     conn.close()
+@app.route('/')
+def main():
+    return render_template('ch07.html')
+@app.route('/api/visit',methods=['POST'])
+def visit():
+    data=request.get_json()
+    insert(data['name'],data['comment'])
+    return jsonify({'status':'success','message':'삽입 완료'})
+@app.route('/api/visitors',methods=['GET'])
+def visitors():
+    rows=select()
+    list=[]
+    for row in rows:
+        name,comment=row
+        list.append({'name':name,'comment':comment})
+    return list
 
-@app.route('/api/visitors', methods=['GET'])
-def get_visitors():
-    rows = select()
-    visitors_data = [
-        {"id": row[0], "name": row[1], "comment": row[2]} 
-        for row in rows
-    ]
-    return jsonify(visitors_data)
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        name = request.form['name']
-        comment = request.form['comment']
-        insert(name, comment)
-        return jsonify({"result": "success", "message": "성공적으로 저장되었습니다."})
-        
-    visitors_list = select()
-    return render_template('ch07.html', visitors=visitors_list)
-
-if __name__ == '__main__':
+if __name__=='__main__':
     create_table()
-    app.run(debug=True)
+    app.run()
