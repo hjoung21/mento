@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request,jsonify
 import sqlite3
+import os
 
 DB_NAME='commentdb'
 app=Flask(__name__)
@@ -63,8 +64,6 @@ def visitors():
         name,comment=row
         list.append({'name':name,'comment':comment})
     return list
-
-import os
 
 if __name__ == '__main__':
     create_table()
