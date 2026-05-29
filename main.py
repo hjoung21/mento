@@ -64,6 +64,11 @@ def visitors():
         list.append({'name':name,'comment':comment})
     return list
 
-if __name__=='__main__':
+import os
+
+if __name__ == '__main__':
     create_table()
-    app.run()
+
+    port = int(os.environ.get("PORT", 5000))
+
+    app.run(host='0.0.0.0', port=port)
