@@ -20,7 +20,7 @@ def create_table():
 def select():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-        cursor.execute("""select * from visitors""")
+    cursor.execute("""select * from visitors""")
     rows = cursor.fetchall()
     print(rows)
     conn.close()
